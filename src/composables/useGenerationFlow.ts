@@ -1,8 +1,10 @@
 import dayjs from 'dayjs'
 import { computed } from 'vue'
 
-import { composeFinalPrompt, composeModelPrompt, composeScenePrompt } from '@/services/promptComposer'
-import { createMockFinalArtwork, createMockLineArt } from '@/services/mockArtwork'
+import { composeFinalPrompt } from '@/services/promptComposer'
+import { generateFinalArtworkWithDoubao, generateLineArtWithDoubao } from '@/services/doubaoImage'
+import { generateFinalArtworkWithGptImage2 } from '@/services/gptImage2'
+import { reverseScenePromptWithApi } from '@/services/sceneReverse'
 import { useAssetStore } from '@/stores/assets'
 import { useGenerationStore } from '@/stores/generation'
 import { usePromptStore } from '@/stores/prompts'
@@ -23,64 +25,64 @@ export function useGenerationFlow() {
 
     generation.setStatus('processing')
     generation.setProgress(25)
-    generation.pushLog('[模型] 开始生成线稿。')
+    generation.pushLog('[模型] 开始调用豆包接口生成线稿。')
     workspace.setWorkflowStatus('processing')
 
-    const lineArt = await createMockLineArt(sceneAsset.value.sourceUrl)
+    const lineArt = await generateLineArtWithDoubao(sceneAsset.value.sourceUrl)
     generation.setLineArt(lineArt)
     generation.setProgress(100)
     generation.setStatus('completed')
-    generation.pushLog('[模型] 线稿已生成。')
+    generation.pushLog('[模型] 豆包线稿已生成。')
     workspace.setWorkflowStatus('completed')
   }
 
-  function generateScenePrompt() {
-    const prompt = composeScenePrompt(workspace.productTheme, workspace.sceneCountry)
+  async function generateScenePrompt() {
+    if (!sceneAsset.value?.sourceUrl)
+      throw new Error('请先选择或上传场景图。')
+
+    generation.pushLog('[模型] 开始调用场景反推接口。')
+    const prompt = await reverseScenePromptWithApi({
+      sceneSourceUrl: sceneAsset.value.sourceUrl,
+      productTheme: workspace.productTheme,
+      sceneCountry: workspace.sceneCountry,
+    })
     prompts.setScenePrompt(prompt, false)
     generation.pushLog('[系统] 场景 prompt 已反推完成。')
-  }
-
-  function generateModelPrompt() {
-    const prompt = composeModelPrompt()
-    prompts.setModelPrompt(prompt, false)
-    generation.pushLog('[系统] 模特 prompt 已反推完成。')
   }
 
   async function generateFinalArtwork() {
     if (!sceneAsset.value)
       throw new Error('请先选择场景图。')
-    if (!assets.usageRightsConfirmed)
-      throw new Error('请先确认模特肖像授权。')
     if (!assets.hasEnoughModelViews)
       throw new Error('请补齐正面、左侧面、右侧面三张模特视图。')
     if (!prompts.scenePrompt)
-      generateScenePrompt()
-    if (!prompts.modelPrompt)
-      generateModelPrompt()
+      await generateScenePrompt()
 
     generation.clearError()
     generation.setStatus('processing')
     generation.setProgress(15)
     workspace.setWorkflowStatus('processing')
-    generation.pushLog('[模型] 开始最终生图。')
+    generation.pushLog(`[模型] 开始最终生图（${workspace.selectedModelProvider}）。`)
 
     const finalPrompt = composeFinalPrompt({
       productTheme: workspace.productTheme,
       scenePrompt: prompts.scenePrompt,
-      modelPrompt: prompts.modelPrompt,
       outputRatio: workspace.selectedRatio,
     })
     prompts.setFinalPrompt(finalPrompt)
 
-    const artwork = await createMockFinalArtwork({
-      ratio: workspace.selectedRatio,
-      productTheme: workspace.productTheme,
-      scenePrompt: prompts.scenePrompt,
-      modelPrompt: prompts.modelPrompt,
-      sceneImage: sceneAsset.value,
-      modelImages: assets.selectedModelViews,
-      lineArtUrl: generation.lineArtUrl || undefined,
-    })
+    const artwork = workspace.selectedModelProvider === 'gpt-image-2'
+      ? await generateFinalArtworkWithGptImage2({
+          ratio: workspace.selectedRatio,
+          finalPrompt,
+        })
+      : await generateFinalArtworkWithDoubao({
+          ratio: workspace.selectedRatio,
+          finalPrompt,
+          sceneImage: sceneAsset.value,
+          modelImages: assets.selectedModelViews,
+          lineArtUrl: generation.lineArtUrl || undefined,
+        })
 
     generation.setFinalImage(artwork)
     generation.setProgress(100)
@@ -94,7 +96,6 @@ export function useGenerationFlow() {
       productTheme: workspace.productTheme,
       outputRatio: workspace.selectedRatio,
       scenePrompt: prompts.scenePrompt,
-      modelPrompt: prompts.modelPrompt,
       finalPrompt,
       finalImageUrl: artwork,
     }
@@ -107,7 +108,6 @@ export function useGenerationFlow() {
     sceneAsset,
     generateLineArt,
     generateScenePrompt,
-    generateModelPrompt,
     generateFinalArtwork,
   }
 }

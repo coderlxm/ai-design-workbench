@@ -2,17 +2,14 @@
 import PromptEditorCard from '@/components/prompt/PromptEditorCard.vue'
 
 const scenePrompt = defineModel<string>('scenePrompt', { default: '' })
-const modelPrompt = defineModel<string>('modelPrompt', { default: '' })
 const finalPrompt = defineModel<string>('finalPrompt', { default: '' })
 
 defineProps<{
   sceneWarning?: string
-  modelWarning?: string
 }>()
 
 defineEmits<{
   generateScenePrompt: []
-  generateModelPrompt: []
   viewFinalPrompt: []
 }>()
 </script>
@@ -27,14 +24,6 @@ defineEmits<{
       :warning="sceneWarning"
       @generate="$emit('generateScenePrompt')"
     />
-    <PromptEditorCard
-      v-model="modelPrompt"
-      title="模特提示词"
-      description="展示和编辑人物特征 prompt。"
-      generate-label="反推模特"
-      :warning="modelWarning"
-      @generate="$emit('generateModelPrompt')"
-    />
     <section class="final-prompt-summary card">
       <header class="final-prompt-summary__header">
         <div>
@@ -42,7 +31,7 @@ defineEmits<{
             最终组合
           </h3>
           <p class="muted">
-            组合产品主题、场景与模特提示词，可继续编辑查看。
+            组合产品主题与场景提示词，可继续编辑查看。
           </p>
         </div>
         <button class="secondary-button" type="button" @click="$emit('viewFinalPrompt')">

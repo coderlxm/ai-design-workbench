@@ -25,17 +25,26 @@ const assets = useAssetStore()
 const prompts = usePromptStore()
 const generation = useGenerationStore()
 
-const { generateLineArt, generateScenePrompt, generateModelPrompt, generateFinalArtwork } = useGenerationFlow()
+const { generateLineArt, generateScenePrompt, generateFinalArtwork } = useGenerationFlow()
 
 useWorkflowPersistence()
 
 const showFinalPrompt = ref(false)
 const cropSourceUrl = ref('')
+const demoScenePrefix = '/image/scenes/demo-scene-'
+const demoModelPrefix = '/image/models/demo-'
+const preferredModelViewTags: ModelViewTag[] = ['front', 'left', 'right', 'back', 'half', 'full']
 
 function restoreLibrary() {
   const discovered = discoverLocalImageAssets()
   assets.setSceneLibrary(discovered.filter(asset => asset.kind === 'scene'))
   assets.setModelLibrary(discovered.filter(asset => asset.kind === 'model') as ModelViewAsset[])
+
+  const preferredScene = assets.sceneLibrary.find(asset => asset.id.includes(`${demoScenePrefix}01`))
+    ?? assets.sceneLibrary.find(asset => asset.id.includes(demoScenePrefix))
+
+  if (preferredScene && (!assets.selectedSceneAsset || !assets.selectedSceneAsset.id.includes(demoScenePrefix)))
+    assets.selectScene(preferredScene)
 
   if (!assets.selectedSceneAsset) {
     const firstScene = assets.sceneLibrary[0]
@@ -43,11 +52,20 @@ function restoreLibrary() {
       assets.selectScene(firstScene)
   }
 
-  if (!assets.selectedModelSet.length && assets.modelLibrary.length) {
-    assets.modelLibrary.forEach(asset => {
-      if (asset.viewTag)
-        assets.addOrReplaceModelView(asset)
+  const demoModelViews = preferredModelViewTags
+    .map(viewTag => assets.modelLibrary.find(asset => asset.id.includes(demoModelPrefix) && asset.viewTag === viewTag))
+    .filter(Boolean) as ModelViewAsset[]
+
+  if (!assets.hasEnoughModelViews && demoModelViews.length >= 3) {
+    assets.clearModelViews()
+    demoModelViews.forEach(asset => {
+      assets.addOrReplaceModelView(asset)
     })
+  }
+
+  if (assets.sceneAssetForPreview && assets.hasEnoughModelViews && workspace.currentStepId === 'scene-input') {
+    workspace.setStep('line-art')
+    generation.pushLog('[系统] 已自动加载演示素材，可直接开始线稿生成。')
   }
 }
 
@@ -119,11 +137,6 @@ function handleClearModelViews() {
   generation.pushLog('[系统] 已清空模特视图。')
 }
 
-function handleToggleRights(value: boolean) {
-  assets.setUsageRightsConfirmed(value)
-  generation.pushLog(value ? '[用户] 已确认模特肖像授权。' : '[用户] 已取消模特肖像授权。')
-}
-
 async function handleGenerateLineArt() {
   try {
     await generateLineArt()
@@ -135,14 +148,15 @@ async function handleGenerateLineArt() {
   }
 }
 
-function handleGenerateScenePrompt() {
-  generateScenePrompt()
-  workspace.setStep('scene-prompt')
-}
-
-function handleGenerateModelPrompt() {
-  generateModelPrompt()
-  workspace.setStep('model-prompt')
+async function handleGenerateScenePrompt() {
+  try {
+    await generateScenePrompt()
+    workspace.setStep('scene-prompt')
+  }
+  catch (error) {
+    generation.setError(error instanceof Error ? error.message : '场景反推失败。')
+    generation.pushLog(`[错误] ${generation.errorMessage}`)
+  }
 }
 
 function handleOpenFinalPrompt() {
@@ -192,7 +206,6 @@ const artifactThumbs = computed<Partial<Record<WorkflowStepId, string>>>(() => (
   'line-art': generation.lineArtUrl,
   'scene-prompt': assets.sceneAssetForPreview?.sourceUrl,
   'model-input': assets.selectedModelViews[0]?.sourceUrl,
-  'model-prompt': assets.selectedModelViews[0]?.sourceUrl,
   'final-output': generation.finalImageUrl,
 }))
 
@@ -202,23 +215,13 @@ const sceneWarning = computed(() => {
   return workspace.sceneCountry !== '美国' ? '场景已锁定为美国，当前输入不会改变该设定。' : ''
 })
 
-const modelWarning = computed(() => {
-  if (!assets.usageRightsConfirmed)
-    return '请先确认模特肖像授权。'
-  if (!assets.hasEnoughModelViews)
-    return `参考图特征不一致或视图不足：还缺少 ${assets.missingModelViewTags.join('、')} 视图。`
-  return ''
-})
-
 watch(
   () => [workspace.productTheme, workspace.selectedRatio, workspace.selectedModelProvider],
   () => {
-    if (prompts.scenePromptEdited || prompts.modelPromptEdited)
+    if (prompts.scenePromptEdited)
       return
     if (prompts.scenePrompt)
       prompts.setScenePrompt(prompts.scenePrompt, false)
-    if (prompts.modelPrompt)
-      prompts.setModelPrompt(prompts.modelPrompt, false)
   },
 )
 
@@ -255,9 +258,7 @@ onBeforeUnmount(() => {
       :cropped-scene="assets.croppedSceneAsset"
       :line-art-url="generation.lineArtUrl"
       :model-views="assets.selectedModelSet"
-      :usage-rights-confirmed="assets.usageRightsConfirmed"
       :scene-prompt="prompts.scenePrompt"
-      :model-prompt="prompts.modelPrompt"
       :final-prompt="prompts.finalPrompt"
       :final-image-url="generation.finalImageUrl"
       :progress="generation.progress"
@@ -267,11 +268,9 @@ onBeforeUnmount(() => {
       @reset-crop="handleResetCrop"
       @generate-line-art="handleGenerateLineArt"
       @generate-scene-prompt="handleGenerateScenePrompt"
-      @generate-model-prompt="handleGenerateModelPrompt"
       @add-model-view="handleAddModelView"
       @remove-model-view="handleRemoveModelView"
       @clear-model-views="handleClearModelViews"
-      @toggle-rights="handleToggleRights"
       @view-final-prompt="handleOpenFinalPrompt"
       @generate-final="handleGenerateFinal"
       @download-final="handleDownloadFinal"
@@ -283,7 +282,6 @@ onBeforeUnmount(() => {
     <template #right>
       <InspectorPanel
         v-model:scene-prompt="prompts.scenePrompt"
-        v-model:model-prompt="prompts.modelPrompt"
         v-model:final-prompt="prompts.finalPrompt"
         v-model:show-final-prompt="showFinalPrompt"
         :status="generation.status"
@@ -291,9 +289,7 @@ onBeforeUnmount(() => {
         :logs="generation.logs"
         :error-message="generation.errorMessage"
         :scene-warning="sceneWarning"
-        :model-warning="modelWarning"
         @generate-scene-prompt="handleGenerateScenePrompt"
-        @generate-model-prompt="handleGenerateModelPrompt"
       />
     </template>
   </AppShell>

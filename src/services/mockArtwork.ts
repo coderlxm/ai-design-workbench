@@ -99,7 +99,6 @@ export async function createMockFinalArtwork(options: {
   ratio: string
   productTheme: string
   scenePrompt: string
-  modelPrompt: string
   sceneImage?: ImageAsset | null
   modelImages: ImageAsset[]
   lineArtUrl?: string | null
@@ -193,7 +192,7 @@ export async function createMockFinalArtwork(options: {
 
   const summaryLines = [
     `场景：${options.scenePrompt.slice(0, 70)}${options.scenePrompt.length > 70 ? '...' : ''}`,
-    `人物：${options.modelPrompt.slice(0, 70)}${options.modelPrompt.length > 70 ? '...' : ''}`,
+    '人物：请严格参考上传的模特图，保持人物一致性。',
   ]
   ctx.font = '400 24px Inter, sans-serif'
   summaryLines.forEach((line, index) => {

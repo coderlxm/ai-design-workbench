@@ -35,7 +35,7 @@ function stepClass(stepId: WorkflowStepId) {
           当前工作流
         </h2>
         <p class="muted">
-          共 6 个步骤
+          共 {{ workflowSteps.length }} 个步骤
         </p>
       </div>
       <StatusBadge :label="workflowStatus === 'processing' ? '处理中' : workflowStatus === 'completed' ? '已完成' : '待开始'" :variant="workflowStatus === 'failed' ? 'error' : workflowStatus === 'completed' ? 'success' : 'muted'" />

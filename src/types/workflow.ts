@@ -3,7 +3,6 @@ export type WorkflowStepId =
   | 'line-art'
   | 'scene-prompt'
   | 'model-input'
-  | 'model-prompt'
   | 'final-output'
 
 export type WorkflowStatus = 'idle' | 'active' | 'processing' | 'completed' | 'failed'
@@ -37,7 +36,6 @@ export interface WorkflowHistoryItem {
   productTheme: string
   outputRatio: OutputRatio
   scenePrompt: string
-  modelPrompt: string
   finalPrompt: string
   finalImageUrl: string
 }

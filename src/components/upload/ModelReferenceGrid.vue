@@ -3,14 +3,12 @@ import type { ModelViewAsset, ModelViewTag } from '@/types/workflow'
 
 const props = defineProps<{
   assets: ModelViewAsset[]
-  usageRightsConfirmed: boolean
 }>()
 
 const emit = defineEmits<{
   add: [viewTag: ModelViewTag, file: File]
   remove: [viewTag: ModelViewTag]
   clear: []
-  toggleRights: [value: boolean]
 }>()
 
 const slots: Array<{ tag: ModelViewTag; label: string; description: string }> = [
@@ -80,11 +78,6 @@ function onFileChange(tag: ModelViewTag, event: Event) {
         </template>
       </div>
     </div>
-
-    <label class="model-grid__rights">
-      <input :checked="usageRightsConfirmed" type="checkbox" @change="emit('toggleRights', ($event.target as HTMLInputElement).checked)">
-      <span>我已确认模特肖像授权</span>
-    </label>
   </section>
 </template>
 
@@ -171,16 +164,4 @@ function onFileChange(tag: ModelViewTag, event: Event) {
   font-size: 12px;
 }
 
-.model-grid__rights {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.model-grid__rights input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary-container);
-}
 </style>

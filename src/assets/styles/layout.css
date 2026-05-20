@@ -195,6 +195,18 @@
   border-radius: var(--radius-lg);
 }
 
+.image-frame__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-mid);
+}
+
+.image-frame__header .section-title {
+  margin-bottom: 4px;
+}
+
 .image-frame__body {
   position: relative;
   background: #f3f4f5;

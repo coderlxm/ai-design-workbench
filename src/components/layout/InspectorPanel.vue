@@ -9,7 +9,6 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { WorkflowStatus } from '@/types/workflow'
 
 const scenePrompt = defineModel<string>('scenePrompt', { default: '' })
-const modelPrompt = defineModel<string>('modelPrompt', { default: '' })
 const finalPrompt = defineModel<string>('finalPrompt', { default: '' })
 const showFinalPrompt = defineModel<boolean>('showFinalPrompt', { default: false })
 
@@ -19,12 +18,10 @@ const props = defineProps<{
   logs: string[]
   errorMessage?: string
   sceneWarning?: string
-  modelWarning?: string
 }>()
 
 defineEmits<{
   generateScenePrompt: []
-  generateModelPrompt: []
   closeFinalPrompt: []
   save: []
   retry: []
@@ -59,12 +56,9 @@ const statusLabel = computed(() => {
 
     <PromptPanel
       v-model:scene-prompt="scenePrompt"
-      v-model:model-prompt="modelPrompt"
       v-model:final-prompt="finalPrompt"
       :scene-warning="sceneWarning"
-      :model-warning="modelWarning"
       @generate-scene-prompt="$emit('generateScenePrompt')"
-      @generate-model-prompt="$emit('generateModelPrompt')"
       @view-final-prompt="showFinalPrompt = true"
     />
 

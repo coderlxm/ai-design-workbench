@@ -1,7 +1,7 @@
 import { fileNameWithoutExt, inferViewTag } from '@/utils/file'
 import type { ImageAsset } from '@/types/workflow'
 
-const modules = import.meta.glob('/image/**/*.{png,jpg,jpeg,webp,avif,gif}', {
+const modules = import.meta.glob('/image/{scenes,models}/**/*.{png,jpg,jpeg,webp,avif,gif}', {
   eager: true,
   import: 'default',
 }) as Record<string, string>

@@ -20,7 +20,7 @@ export const useWorkspaceStore = defineStore('workspace', {
   actions: {
     setStep(stepId: WorkflowStepId) {
       this.currentStepId = stepId
-      if (stepId === 'model-input' || stepId === 'model-prompt')
+      if (stepId === 'model-input')
         this.activePanel = 'model'
       else if (stepId === 'final-output')
         this.activePanel = 'final'

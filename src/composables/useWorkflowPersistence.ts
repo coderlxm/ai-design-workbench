@@ -4,11 +4,18 @@ import { useAssetStore } from '@/stores/assets'
 import { useGenerationStore } from '@/stores/generation'
 import { usePromptStore } from '@/stores/prompts'
 import { useWorkspaceStore } from '@/stores/workspace'
+import type { WorkflowHistoryItem } from '@/types/workflow'
 
 const STORAGE_KEY = 'ai-design-workbench:v1'
 
 function isPersistableSourceUrl(sourceUrl?: string | null) {
-  return typeof sourceUrl === 'string' && !sourceUrl.startsWith('blob:')
+  return typeof sourceUrl === 'string'
+    && !sourceUrl.startsWith('blob:')
+    && !sourceUrl.startsWith('data:image/')
+}
+
+function sanitizeHistoryForStorage(history: WorkflowHistoryItem[]) {
+  return history.filter(item => isPersistableSourceUrl(item.finalImageUrl))
 }
 
 export function useWorkflowPersistence() {
@@ -30,17 +37,25 @@ export function useWorkflowPersistence() {
       const parsed = JSON.parse(saved) as Partial<typeof state>
       if (parsed.workspace)
         Object.assign(workspace, parsed.workspace)
-      if (parsed.prompts)
-        Object.assign(prompts, parsed.prompts)
+      if (parsed.prompts) {
+        if (typeof parsed.prompts.scenePrompt === 'string')
+          prompts.scenePrompt = parsed.prompts.scenePrompt
+        if (typeof parsed.prompts.finalPrompt === 'string')
+          prompts.finalPrompt = parsed.prompts.finalPrompt
+        if (typeof parsed.prompts.scenePromptEdited === 'boolean')
+          prompts.scenePromptEdited = parsed.prompts.scenePromptEdited
+      }
       if (parsed.generation)
         Object.assign(generation, parsed.generation)
+      if (!isPersistableSourceUrl(generation.finalImageUrl))
+        generation.finalImageUrl = ''
+      generation.history = sanitizeHistoryForStorage(generation.history)
       if (parsed.assets) {
         if (parsed.assets.selectedSceneAsset && isPersistableSourceUrl(parsed.assets.selectedSceneAsset.sourceUrl))
           assets.selectedSceneAsset = parsed.assets.selectedSceneAsset
         if (parsed.assets.croppedSceneAsset && isPersistableSourceUrl(parsed.assets.croppedSceneAsset.sourceUrl))
           assets.croppedSceneAsset = parsed.assets.croppedSceneAsset
         assets.selectedModelSet = (parsed.assets.selectedModelSet ?? []).filter(asset => isPersistableSourceUrl(asset.sourceUrl))
-        assets.usageRightsConfirmed = Boolean(parsed.assets.usageRightsConfirmed)
       }
     }
     catch {
@@ -63,28 +78,31 @@ export function useWorkflowPersistence() {
         selectedSceneAsset: isPersistableSourceUrl(assets.selectedSceneAsset?.sourceUrl) ? assets.selectedSceneAsset : null,
         croppedSceneAsset: isPersistableSourceUrl(assets.croppedSceneAsset?.sourceUrl) ? assets.croppedSceneAsset : null,
         selectedModelSet: assets.selectedModelSet.filter(asset => isPersistableSourceUrl(asset.sourceUrl)),
-        usageRightsConfirmed: assets.usageRightsConfirmed,
       },
       prompts: {
         scenePrompt: prompts.scenePrompt,
-        modelPrompt: prompts.modelPrompt,
         finalPrompt: prompts.finalPrompt,
         scenePromptEdited: prompts.scenePromptEdited,
-        modelPromptEdited: prompts.modelPromptEdited,
       },
       generation: {
         lineArtUrl: generation.lineArtUrl,
-        finalImageUrl: generation.finalImageUrl,
+        finalImageUrl: isPersistableSourceUrl(generation.finalImageUrl) ? generation.finalImageUrl : '',
         progress: generation.progress,
         status: generation.status,
         errorMessage: generation.errorMessage,
-        history: generation.history,
+        history: sanitizeHistoryForStorage(generation.history),
         logs: generation.logs,
         lastGeneratedAt: generation.lastGeneratedAt,
       },
     }),
     value => {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+      }
+      catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        generation.pushLog(`[系统] 本地存储写入失败：${message}`)
+      }
     },
     { deep: true },
   )

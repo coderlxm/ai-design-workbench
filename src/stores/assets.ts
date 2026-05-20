@@ -9,7 +9,6 @@ export const useAssetStore = defineStore('assets', {
     selectedSceneAsset: null as ImageAsset | null,
     croppedSceneAsset: null as ImageAsset | null,
     selectedModelSet: [] as ModelViewAsset[],
-    usageRightsConfirmed: false,
   }),
   getters: {
     sceneAssetForPreview: state => state.croppedSceneAsset ?? state.selectedSceneAsset,
@@ -43,9 +42,6 @@ export const useAssetStore = defineStore('assets', {
     },
     clearModelViews() {
       this.selectedModelSet = []
-    },
-    setUsageRightsConfirmed(value: boolean) {
-      this.usageRightsConfirmed = value
     },
   },
 })

@@ -42,7 +42,6 @@ function downloadRecord(url: string, productTheme: string) {
           <img :src="item.finalImageUrl" :alt="item.productTheme">
           <div class="records-grid__meta">
             <p><strong>场景 Prompt</strong>{{ item.scenePrompt }}</p>
-            <p><strong>模特 Prompt</strong>{{ item.modelPrompt }}</p>
             <p><strong>最终 Prompt</strong>{{ item.finalPrompt }}</p>
           </div>
           <div class="records-grid__actions">
