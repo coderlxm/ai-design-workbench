@@ -1,6 +1,7 @@
 import type { ImageAsset } from '@/types/workflow'
 
 const GPT_IMAGE2_API_PATH = '/api/gpt-image-2'
+const GPT_IMAGE2_EDIT_API_PATH = '/api/gpt-image-2-edit'
 const NANO_BANANA_PRO_API_PATH = '/api/nano-banana-pro'
 const AIGATEWAY_API_KEY = 'c1b25389ed7444c08620b37f5394108a'
 
@@ -140,6 +141,9 @@ async function parseGatewayResponse(response: Response, requestLabel: string) {
   }
 
   if (!response.ok) {
+    if (result.error?.message?.includes('Content-Type header not allow')) {
+      throw new Error(`${requestLabel} 当前路由仅支持 application/json，请确认图生图代理是否指向正确的编辑接口。`)
+    }
     const message = result.error?.message || result.message || `${requestLabel} 接口请求失败：${response.status}`
     throw new Error(message)
   }
@@ -189,7 +193,7 @@ export async function generateFinalArtworkWithGptImage2(options: {
     formData.append('image[]', new File([blob], `reference-${index + 1}.${ext}`, { type: blob.type || 'image/png' }))
   }
 
-  const response = await fetch(GPT_IMAGE2_API_PATH, {
+  const response = await fetch(GPT_IMAGE2_EDIT_API_PATH, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${AIGATEWAY_API_KEY}`,
