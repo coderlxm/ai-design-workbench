@@ -48,7 +48,7 @@ export function useGenerationFlow() {
 
     if (workspace.enableFilterReverse) {
       generation.setProgress(35)
-      generation.pushLog('[模型] 开始逆向场景滤镜提示词。')
+      generation.pushLog('[模型] 开始生成场景滤镜优化提示词。')
       const originalSceneSourceUrl = assets.selectedSceneAsset?.sourceUrl ?? sceneAsset.value.sourceUrl
 
       try {
@@ -57,17 +57,17 @@ export function useGenerationFlow() {
           productTheme: workspace.productTheme,
         })
         prompts.setFilterPrompt(filterPrompt)
-        generation.pushLog('[系统] 场景滤镜提示词逆向完成。')
+        generation.pushLog('[系统] 场景滤镜优化提示词生成完成。')
       }
       catch (error) {
         prompts.setFilterPrompt('')
         const message = error instanceof Error ? error.message : String(error)
-        generation.pushLog(`[警告] 滤镜提示词逆向失败，已降级继续生图：${message}`)
+        generation.pushLog(`[警告] 滤镜优化提示词生成失败，已降级继续生图：${message}`)
       }
     }
     else {
       prompts.setFilterPrompt('')
-      generation.pushLog('[系统] 已关闭滤镜逆向，直接使用更换人物 Prompt 生图。')
+      generation.pushLog('[系统] 已关闭滤镜优化，直接使用更换人物 Prompt 生图。')
     }
 
     generation.setProgress(60)

@@ -3,9 +3,12 @@ import PromptEditorCard from '@/components/prompt/PromptEditorCard.vue'
 
 const replacePrompt = defineModel<string>('replacePrompt', { default: '' })
 
-defineProps<{
+withDefaults(defineProps<{
   sceneWarning?: string
-}>()
+  showFinalPromptSummary?: boolean
+}>(), {
+  showFinalPromptSummary: true,
+})
 
 defineEmits<{
   generateReplacePrompt: []
@@ -23,7 +26,7 @@ defineEmits<{
       :warning="sceneWarning"
       @generate="$emit('generateReplacePrompt')"
     />
-    <section class="final-prompt-summary card">
+    <section v-if="showFinalPromptSummary" class="final-prompt-summary card">
       <header class="final-prompt-summary__header">
         <div>
           <h3 class="section-title">

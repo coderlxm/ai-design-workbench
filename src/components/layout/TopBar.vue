@@ -7,7 +7,11 @@ import { modelProviders, outputRatios } from '@/constants/workflow'
 const productTheme = defineModel<string>('productTheme', { default: '' })
 const selectedRatio = defineModel<string>('selectedRatio', { default: '4:5' })
 const selectedModelProvider = defineModel<string>('selectedModelProvider', { default: '豆包' })
-const enableFilterReverse = defineModel<boolean>('enableFilterReverse', { default: true })
+const enableFilterReverse = defineModel<boolean>('enableFilterReverse', { default: false })
+
+// Temporary visibility switches.
+const SHOW_WORKBENCH_TITLE = false
+const SHOW_PRODUCT_THEME_FIELD = false
 
 defineEmits<{
   save: []
@@ -22,13 +26,13 @@ defineEmits<{
         <div class="top-bar__kicker">
           AI 设计工作台
         </div>
-        <h1 class="top-bar__title">
+        <h1 v-if="SHOW_WORKBENCH_TITLE" class="top-bar__title">
           母婴产品工作台
         </h1>
       </div>
       <div class="top-bar__divider" />
-      <div class="top-bar__fields">
-        <label class="top-bar__field">
+      <div :class="['top-bar__fields', { 'top-bar__fields--compact': !SHOW_PRODUCT_THEME_FIELD }]">
+        <label v-if="SHOW_PRODUCT_THEME_FIELD" class="top-bar__field">
           <span>产品主题</span>
           <BaseInput v-model="productTheme" placeholder="输入产品主题" />
         </label>
@@ -41,7 +45,7 @@ defineEmits<{
           <BaseSelect v-model="selectedModelProvider" :options="modelProviders" />
         </label>
         <label class="top-bar__field top-bar__field--checkbox">
-          <span>滤镜逆向</span>
+          <span>滤镜优化</span>
           <BaseCheckbox v-model="enableFilterReverse" label="启用" />
         </label>
       </div>
@@ -77,9 +81,9 @@ defineEmits<{
 
 .top-bar__kicker {
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -102,6 +106,10 @@ defineEmits<{
   grid-template-columns: 360px 180px 180px 140px;
   gap: 32px;
   align-items: center;
+}
+
+.top-bar__fields--compact {
+  grid-template-columns: 180px 180px 140px;
 }
 
 .top-bar__field {

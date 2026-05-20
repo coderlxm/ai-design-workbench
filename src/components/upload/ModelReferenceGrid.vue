@@ -10,6 +10,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   upload: [file: File]
   clear: []
+  next: []
 }>()
 
 const selectedAsset = computed(() => props.assets[0] ?? null)
@@ -34,9 +35,14 @@ function onFileChange(event: Event) {
           上传 1 张包含六视图的拼图作为步骤2输入。
         </p>
       </div>
-      <button class="ghost-button" type="button" :disabled="!selectedAsset" @click="emit('clear')">
-        清空
-      </button>
+      <div class="model-grid__header-actions">
+        <button class="secondary-button" type="button" @click="emit('next')">
+          下一张
+        </button>
+        <button class="ghost-button" type="button" :disabled="!selectedAsset" @click="emit('clear')">
+          清空
+        </button>
+      </div>
     </header>
 
     <div class="model-slot">
@@ -72,6 +78,12 @@ function onFileChange(event: Event) {
   align-items: start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.model-grid__header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .model-slot {

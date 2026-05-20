@@ -1,7 +1,9 @@
 .app-shell {
+  height: 100vh;
   min-height: 100vh;
   display: grid;
   grid-template-rows: 64px minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .top-bar {
@@ -21,12 +23,17 @@
 .tri-pane {
   display: grid;
   grid-template-columns: var(--sidebar-left) minmax(0, 1fr) var(--panel-right);
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .left-rail,
 .right-rail {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+  overflow: hidden;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
 }
@@ -47,6 +54,7 @@
 
 .panel-scroll {
   height: 100%;
+  min-height: 0;
   overflow: auto;
 }
 

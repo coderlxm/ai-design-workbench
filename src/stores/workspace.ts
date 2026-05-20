@@ -8,7 +8,7 @@ export const useWorkspaceStore = defineStore('workspace', {
     productTheme: '母婴暖奶器广告图',
     selectedRatio: outputRatios[1] as OutputRatio,
     selectedModelProvider: modelProviders[0] as ModelProvider,
-    enableFilterReverse: true,
+    enableFilterReverse: false,
     currentStepId: 'scene-input' as WorkflowStepId,
     workflowStatus: 'idle' as WorkflowStatus,
     isCropping: false,

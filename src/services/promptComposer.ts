@@ -20,7 +20,7 @@ export function composeFinalGenerationPrompt(replacePrompt: string, filterPrompt
   return [
     replacePrompt,
     '',
-    '请额外遵循以下“原场景图逆向滤镜提示词”，用于优化光影与色彩风格，并保持自然商业摄影质感：',
+    '请额外遵循以下“原场景图滤镜优化提示词”，用于优化光影与色彩风格，并保持自然商业摄影质感：',
     filterPrompt.trim(),
   ].join('\n')
 }

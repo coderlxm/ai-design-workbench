@@ -14,6 +14,7 @@ const emit = defineEmits<{
   uploadScene: [file: File]
   cropScene: []
   resetCrop: []
+  nextScene: []
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -45,15 +46,19 @@ function onDownloadCurrent() {
           <span class="material-symbols-outlined">upload</span>
           上传场景图
         </button>
-        <button class="secondary-button" type="button" :disabled="!preview" @click="$emit('cropScene')">
+        <button class="secondary-button" type="button" @click="$emit('nextScene')">
+          <span class="material-symbols-outlined">skip_next</span>
+          下一张
+        </button>
+        <button v-if="false" class="secondary-button" type="button" :disabled="!preview" @click="$emit('cropScene')">
           <span class="material-symbols-outlined">crop</span>
           主体裁剪
         </button>
-        <button class="secondary-button" type="button" :disabled="!preview" @click="onDownloadCurrent">
+        <button v-if="false" class="secondary-button" type="button" :disabled="!preview" @click="onDownloadCurrent">
           <span class="material-symbols-outlined">download</span>
           下载预览
         </button>
-        <button class="ghost-button" type="button" :disabled="!croppedScene" @click="$emit('resetCrop')">
+        <button v-if="false" class="ghost-button" type="button" :disabled="!croppedScene" @click="$emit('resetCrop')">
           重置裁剪
         </button>
       </div>

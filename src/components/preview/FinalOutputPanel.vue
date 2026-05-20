@@ -1,11 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import BaseCard from '@/components/common/BaseCard.vue'
 import ProgressBar from '@/components/common/ProgressBar.vue'
 import IconButton from '@/components/common/IconButton.vue'
+import { useLoadingOverlay } from '@/composables/useLoadingOverlay'
 import type { WorkflowHistoryItem } from '@/types/workflow'
 
-defineProps<{
+const props = defineProps<{
   finalImageUrl?: string | null
+  isGenerating: boolean
   progress: number
   history: WorkflowHistoryItem[]
 }>()
@@ -18,6 +22,15 @@ defineEmits<{
   viewPrompt: []
   openRecords: []
 }>()
+
+const {
+  showOverlay,
+  overlayTitle,
+  overlayHint,
+} = useLoadingOverlay(
+  computed(() => props.isGenerating),
+  computed(() => props.progress),
+)
 </script>
 
 <template>
@@ -71,6 +84,15 @@ defineEmits<{
           <span class="material-symbols-outlined">image</span>
           <p>尚未生成最终图片</p>
         </div>
+        <transition name="mask-fade">
+          <div v-if="showOverlay" class="final-output__mask">
+            <div class="final-output__mask-card">
+              <div class="final-output__mask-spinner" />
+              <strong>{{ overlayTitle }}</strong>
+              <span>{{ overlayHint }}</span>
+            </div>
+          </div>
+        </transition>
       </div>
     </section>
 
@@ -112,6 +134,7 @@ defineEmits<{
 
 .final-output__preview {
   min-height: 440px;
+  position: relative;
 }
 
 .final-output__preview img {
@@ -134,6 +157,63 @@ defineEmits<{
 .final-output__empty .material-symbols-outlined {
   font-size: 40px;
   color: var(--primary-container);
+}
+
+.final-output__mask {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(248, 250, 252, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.final-output__mask-card {
+  min-width: 220px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border-mid);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.final-output__mask-card strong {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--on-surface);
+}
+
+.final-output__mask-card span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.final-output__mask-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid rgba(2, 185, 107, 0.2);
+  border-top-color: var(--primary);
+  animation: loading-spin 1s linear infinite;
+}
+
+.mask-fade-enter-active,
+.mask-fade-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.mask-fade-enter-from,
+.mask-fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .history-list {

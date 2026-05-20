@@ -185,7 +185,7 @@ export async function reverseScenePromptWithApi(options: {
 
 function buildFilterReverseQuery(productTheme: string) {
   return [
-    '请基于上传的原场景图，逆向生成“滤镜优化提示词”，用于后续AI生图的光影与色彩优化。',
+    '请基于上传的原场景图，生成“滤镜优化提示词”，用于后续AI生图的光影与色彩优化。',
     `产品主题：${productTheme || '未提供'}`,
     '请严格按以下结构输出，不要省略字段，不要输出 markdown：',
     '一、视觉结论 这张图属于：____ 核心关键词：____ 整体色彩：____ 光线类型：____ 镜头语言：____',
@@ -227,10 +227,10 @@ export async function reverseFilterPromptWithApi(options: {
 
   const result = await parseJsonSafely<SceneReverseChatResponse>(response)
   if (!response.ok)
-    throw new Error(result.message || `滤镜反推失败：${response.status}`)
+    throw new Error(result.message || `滤镜优化提示词生成失败：${response.status}`)
 
   const answer = result.answer?.trim()
   if (!answer)
-    throw new Error('滤镜反推接口未返回有效提示词。')
+    throw new Error('滤镜优化接口未返回有效提示词。')
   return answer
 }

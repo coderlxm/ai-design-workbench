@@ -105,6 +105,21 @@ function handleResetCrop() {
   generation.pushLog('[系统] 已重置裁剪结果。')
 }
 
+function handleSelectNextScene() {
+  const library = assets.sceneLibrary
+  if (!library.length)
+    return
+
+  const currentIndex = library.findIndex(asset => asset.id === assets.selectedSceneAsset?.id)
+  const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % library.length : 0
+  const nextAsset = library[nextIndex]
+  if (!nextAsset)
+    return
+
+  assets.selectScene(nextAsset)
+  generation.pushLog(`[系统] 已切换场景图：${nextAsset.title}`)
+}
+
 function handleUploadModelReference(file: File) {
   const asset: ImageAsset = {
     id: `model-reference-${Date.now()}`,
@@ -120,6 +135,21 @@ function handleUploadModelReference(file: File) {
 function handleClearModelViews() {
   assets.clearModelViews()
   generation.pushLog('[系统] 已清空模特参考图。')
+}
+
+function handleSelectNextModelReference() {
+  const library = assets.modelLibrary
+  if (!library.length)
+    return
+
+  const currentIndex = library.findIndex(asset => asset.id === assets.selectedModelReference?.id)
+  const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % library.length : 0
+  const nextAsset = library[nextIndex]
+  if (!nextAsset)
+    return
+
+  assets.setModelReference(nextAsset)
+  generation.pushLog(`[系统] 已切换模特参考图：${nextAsset.title}`)
 }
 
 async function handleGenerateReplacePrompt() {
@@ -224,14 +254,17 @@ onBeforeUnmount(() => {
       :cropped-scene="assets.croppedSceneAsset"
       :model-views="assets.selectedModelSet"
       :final-image-url="generation.finalImageUrl"
+      :is-generating="generation.status === 'processing'"
       :progress="generation.progress"
       :history="generation.history"
       @upload-scene="handleUploadScene"
+      @next-scene="handleSelectNextScene"
       @crop-scene="handleCropScene"
       @reset-crop="handleResetCrop"
       @generate-replace-prompt="handleGenerateReplacePrompt"
       @upload-model-reference="handleUploadModelReference"
       @clear-model-views="handleClearModelViews"
+      @next-model-reference="handleSelectNextModelReference"
       @view-final-prompt="handleOpenFinalPrompt"
       @generate-final="handleGenerateFinal"
       @download-final="handleDownloadFinal"

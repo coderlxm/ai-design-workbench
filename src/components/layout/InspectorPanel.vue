@@ -10,7 +10,7 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { WorkflowStatus } from '@/types/workflow'
 
 const replacePrompt = defineModel<string>('replacePrompt', { default: '' })
-const enableFilterReverse = defineModel<boolean>('enableFilterReverse', { default: true })
+const enableFilterReverse = defineModel<boolean>('enableFilterReverse', { default: false })
 const showFinalPrompt = defineModel<boolean>('showFinalPrompt', { default: false })
 
 const props = defineProps<{
@@ -41,6 +41,11 @@ const statusLabel = computed(() => {
       return '空闲'
   }
 })
+
+// Temporary visibility switches for right panel sections.
+const SHOW_RIGHT_FINAL_PROMPT = false
+const SHOW_RIGHT_FILTER_OPTIMIZATION = false
+const SHOW_RIGHT_LOGS = false
 </script>
 
 <template>
@@ -59,26 +64,27 @@ const statusLabel = computed(() => {
     <PromptPanel
       v-model:replace-prompt="replacePrompt"
       :scene-warning="sceneWarning"
+      :show-final-prompt-summary="SHOW_RIGHT_FINAL_PROMPT"
       @generate-replace-prompt="$emit('generateReplacePrompt')"
       @view-replace-prompt="showFinalPrompt = true"
     />
 
-    <BaseCard title="滤镜逆向" description="控制并查看隐形滤镜逆向流程。">
+    <BaseCard v-if="SHOW_RIGHT_FILTER_OPTIMIZATION" title="滤镜优化" description="控制并查看隐形滤镜优化流程。">
       <div class="inspector-panel__filter">
-        <BaseCheckbox v-model="enableFilterReverse" label="启用滤镜逆向（基于原场景图）" />
+        <BaseCheckbox v-model="enableFilterReverse" label="启用滤镜优化（基于原场景图）" />
         <p class="muted">
-          当前状态：{{ enableFilterReverse ? '已启用' : '已关闭（将跳过滤镜逆向）' }}
+          当前状态：{{ enableFilterReverse ? '已启用' : '已关闭（将跳过滤镜优化）' }}
         </p>
         <textarea
           class="textarea mono inspector-panel__filter-output"
           :value="filterPrompt || ''"
           readonly
-          placeholder="本次执行后会在这里显示逆向得到的滤镜提示词。"
+          placeholder="本次执行后会在这里显示生成的滤镜优化提示词。"
         />
       </div>
     </BaseCard>
 
-    <BaseCard title="实时日志" description="仅保存本地工作流日志，便于验收和排查。">
+    <BaseCard v-if="SHOW_RIGHT_LOGS" title="实时日志" description="仅保存本地工作流日志，便于验收和排查。">
       <div class="inspector-panel__logs custom-scrollbar">
         <p v-for="log in logs" :key="log">
           {{ log }}

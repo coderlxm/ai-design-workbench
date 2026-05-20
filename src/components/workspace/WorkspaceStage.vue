@@ -13,6 +13,7 @@ const props = defineProps<{
   croppedScene?: ImageAsset | null
   modelViews: ImageAsset[]
   finalImageUrl?: string | null
+  isGenerating: boolean
   progress: number
   history: WorkflowHistoryItem[]
 }>()
@@ -21,9 +22,11 @@ const emit = defineEmits<{
   uploadScene: [file: File]
   cropScene: []
   resetCrop: []
+  nextScene: []
   generateReplacePrompt: []
   uploadModelReference: [file: File]
   clearModelViews: []
+  nextModelReference: []
   viewFinalPrompt: []
   generateFinal: []
   downloadFinal: []
@@ -65,6 +68,7 @@ const stageTitle = computed(() => {
       :selected-scene="selectedScene"
       :cropped-scene="croppedScene"
       @upload-scene="$emit('uploadScene', $event)"
+      @next-scene="$emit('nextScene')"
       @crop-scene="$emit('cropScene')"
       @reset-crop="$emit('resetCrop')"
     />
@@ -87,12 +91,14 @@ const stageTitle = computed(() => {
       v-else-if="currentStepId === 'model-input'"
       :assets="modelViews"
       @upload="$emit('uploadModelReference', $event)"
+      @next="$emit('nextModelReference')"
       @clear="$emit('clearModelViews')"
     />
 
     <FinalOutputPanel
       v-else
       :final-image-url="finalImageUrl"
+      :is-generating="isGenerating"
       :progress="progress"
       :history="history"
       @generate="$emit('generateFinal')"
