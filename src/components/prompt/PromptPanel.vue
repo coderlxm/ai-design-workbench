@@ -1,45 +1,44 @@
 <script setup lang="ts">
 import PromptEditorCard from '@/components/prompt/PromptEditorCard.vue'
 
-const scenePrompt = defineModel<string>('scenePrompt', { default: '' })
-const finalPrompt = defineModel<string>('finalPrompt', { default: '' })
+const replacePrompt = defineModel<string>('replacePrompt', { default: '' })
 
 defineProps<{
   sceneWarning?: string
 }>()
 
 defineEmits<{
-  generateScenePrompt: []
-  viewFinalPrompt: []
+  generateReplacePrompt: []
+  viewReplacePrompt: []
 }>()
 </script>
 
 <template>
   <div class="workspace-stack">
     <PromptEditorCard
-      v-model="scenePrompt"
-      title="场景提示词"
-      description="展示和编辑场景逆向 prompt。"
-      generate-label="反推场景"
+      v-model="replacePrompt"
+      title="更换人物 Prompt"
+      description="生成并编辑步骤3所需的更换人物提示词。"
+      generate-label="生成更换人物 Prompt"
       :warning="sceneWarning"
-      @generate="$emit('generateScenePrompt')"
+      @generate="$emit('generateReplacePrompt')"
     />
     <section class="final-prompt-summary card">
       <header class="final-prompt-summary__header">
         <div>
           <h3 class="section-title">
-            最终组合
+            最终入参 Prompt
           </h3>
           <p class="muted">
-            组合产品主题与场景提示词，可继续编辑查看。
+            步骤4将直接使用该 Prompt 与图片一起生图。
           </p>
         </div>
-        <button class="secondary-button" type="button" @click="$emit('viewFinalPrompt')">
+        <button class="secondary-button" type="button" @click="$emit('viewReplacePrompt')">
           <span class="material-symbols-outlined">visibility</span>
-          查看最终 Prompt
+          查看 Prompt
         </button>
       </header>
-      <textarea v-model="finalPrompt" class="textarea mono" readonly />
+      <textarea v-model="replacePrompt" class="textarea mono" readonly />
     </section>
   </div>
 </template>

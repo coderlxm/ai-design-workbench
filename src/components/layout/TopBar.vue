@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseCheckbox from '@/components/common/BaseCheckbox.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import { modelProviders, outputRatios } from '@/constants/workflow'
@@ -6,6 +7,7 @@ import { modelProviders, outputRatios } from '@/constants/workflow'
 const productTheme = defineModel<string>('productTheme', { default: '' })
 const selectedRatio = defineModel<string>('selectedRatio', { default: '4:5' })
 const selectedModelProvider = defineModel<string>('selectedModelProvider', { default: '豆包' })
+const enableFilterReverse = defineModel<boolean>('enableFilterReverse', { default: true })
 
 defineEmits<{
   save: []
@@ -37,6 +39,10 @@ defineEmits<{
         <label class="top-bar__field">
           <span>模型选择</span>
           <BaseSelect v-model="selectedModelProvider" :options="modelProviders" />
+        </label>
+        <label class="top-bar__field top-bar__field--checkbox">
+          <span>滤镜逆向</span>
+          <BaseCheckbox v-model="enableFilterReverse" label="启用" />
         </label>
       </div>
     </div>
@@ -93,7 +99,7 @@ defineEmits<{
 
 .top-bar__fields {
   display: grid;
-  grid-template-columns: 360px 220px 220px;
+  grid-template-columns: 360px 180px 180px 140px;
   gap: 32px;
   align-items: center;
 }
@@ -112,6 +118,10 @@ defineEmits<{
 .top-bar__field :deep(.base-input),
 .top-bar__field :deep(.base-select) {
   min-height: 36px;
+}
+
+.top-bar__field--checkbox {
+  grid-template-columns: auto auto;
 }
 
 .top-bar__actions {

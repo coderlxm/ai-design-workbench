@@ -79,7 +79,7 @@ onBeforeUnmount(destroyCropper)
             主体裁剪
           </h3>
           <p class="muted">
-            调整场景图的主体区域，确认后用于后续线稿与生图。
+            调整场景图的主体区域，确认后用于后续更换人物与生图。
           </p>
         </div>
         <button class="ghost-button" type="button" @click="$emit('close')">

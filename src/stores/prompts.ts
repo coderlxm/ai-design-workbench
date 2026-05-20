@@ -2,18 +2,18 @@ import { defineStore } from 'pinia'
 
 export const usePromptStore = defineStore('prompts', {
   state: () => ({
-    scenePrompt: '',
-    finalPrompt: '',
-    scenePromptEdited: false,
+    replacePrompt: '',
+    filterPrompt: '',
+    replacePromptEdited: false,
     showFinalPromptDrawer: false,
   }),
   actions: {
-    setScenePrompt(value: string, edited = false) {
-      this.scenePrompt = value
-      this.scenePromptEdited = edited
+    setReplacePrompt(value: string, edited = false) {
+      this.replacePrompt = value
+      this.replacePromptEdited = edited
     },
-    setFinalPrompt(value: string) {
-      this.finalPrompt = value
+    setFilterPrompt(value: string) {
+      this.filterPrompt = value
     },
   },
 })

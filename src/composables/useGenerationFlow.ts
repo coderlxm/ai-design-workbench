@@ -1,10 +1,10 @@
 import dayjs from 'dayjs'
 import { computed } from 'vue'
 
-import { composeFinalPrompt } from '@/services/promptComposer'
-import { generateFinalArtworkWithDoubao, generateLineArtWithDoubao } from '@/services/doubaoImage'
-import { generateFinalArtworkWithGptImage2 } from '@/services/gptImage2'
-import { reverseScenePromptWithApi } from '@/services/sceneReverse'
+import { composeFinalGenerationPrompt, composeReplacePrompt } from '@/services/promptComposer'
+import { generateFinalArtworkWithDoubao } from '@/services/doubaoImage'
+import { generateFinalArtworkWithGptImage2, generateFinalArtworkWithNanoBananaPro } from '@/services/gptImage2'
+import { reverseFilterPromptWithApi } from '@/services/sceneReverse'
 import { useAssetStore } from '@/stores/assets'
 import { useGenerationStore } from '@/stores/generation'
 import { usePromptStore } from '@/stores/prompts'
@@ -19,44 +19,26 @@ export function useGenerationFlow() {
 
   const sceneAsset = computed(() => assets.sceneAssetForPreview)
 
-  async function generateLineArt() {
+  async function generateReplacePrompt() {
     if (!sceneAsset.value?.sourceUrl)
       throw new Error('请先选择或上传场景图。')
+    if (!assets.hasModelReference)
+      throw new Error('请先上传模特参考图（单张六视图拼图）。')
 
-    generation.setStatus('processing')
-    generation.setProgress(25)
-    generation.pushLog('[模型] 开始调用豆包接口生成线稿。')
-    workspace.setWorkflowStatus('processing')
-
-    const lineArt = await generateLineArtWithDoubao(sceneAsset.value.sourceUrl)
-    generation.setLineArt(lineArt)
-    generation.setProgress(100)
-    generation.setStatus('completed')
-    generation.pushLog('[模型] 豆包线稿已生成。')
-    workspace.setWorkflowStatus('completed')
-  }
-
-  async function generateScenePrompt() {
-    if (!sceneAsset.value?.sourceUrl)
-      throw new Error('请先选择或上传场景图。')
-
-    generation.pushLog('[模型] 开始调用场景反推接口。')
-    const prompt = await reverseScenePromptWithApi({
-      sceneSourceUrl: sceneAsset.value.sourceUrl,
+    const prompt = composeReplacePrompt({
       productTheme: workspace.productTheme,
-      sceneCountry: workspace.sceneCountry,
     })
-    prompts.setScenePrompt(prompt, false)
-    generation.pushLog('[系统] 场景 prompt 已反推完成。')
+    prompts.setReplacePrompt(prompt, false)
+    generation.pushLog('[系统] 更换人物 Prompt 已生成。')
   }
 
   async function generateFinalArtwork() {
     if (!sceneAsset.value)
       throw new Error('请先选择场景图。')
-    if (!assets.hasEnoughModelViews)
-      throw new Error('请补齐正面、左侧面、右侧面三张模特视图。')
-    if (!prompts.scenePrompt)
-      await generateScenePrompt()
+    if (!assets.hasModelReference)
+      throw new Error('请先上传模特参考图（单张六视图拼图）。')
+    if (!prompts.replacePrompt)
+      await generateReplacePrompt()
 
     generation.clearError()
     generation.setStatus('processing')
@@ -64,25 +46,53 @@ export function useGenerationFlow() {
     workspace.setWorkflowStatus('processing')
     generation.pushLog(`[模型] 开始最终生图（${workspace.selectedModelProvider}）。`)
 
-    const finalPrompt = composeFinalPrompt({
-      productTheme: workspace.productTheme,
-      scenePrompt: prompts.scenePrompt,
-      outputRatio: workspace.selectedRatio,
-    })
-    prompts.setFinalPrompt(finalPrompt)
+    if (workspace.enableFilterReverse) {
+      generation.setProgress(35)
+      generation.pushLog('[模型] 开始逆向场景滤镜提示词。')
+      const originalSceneSourceUrl = assets.selectedSceneAsset?.sourceUrl ?? sceneAsset.value.sourceUrl
+
+      try {
+        const filterPrompt = await reverseFilterPromptWithApi({
+          sceneSourceUrl: originalSceneSourceUrl,
+          productTheme: workspace.productTheme,
+        })
+        prompts.setFilterPrompt(filterPrompt)
+        generation.pushLog('[系统] 场景滤镜提示词逆向完成。')
+      }
+      catch (error) {
+        prompts.setFilterPrompt('')
+        const message = error instanceof Error ? error.message : String(error)
+        generation.pushLog(`[警告] 滤镜提示词逆向失败，已降级继续生图：${message}`)
+      }
+    }
+    else {
+      prompts.setFilterPrompt('')
+      generation.pushLog('[系统] 已关闭滤镜逆向，直接使用更换人物 Prompt 生图。')
+    }
+
+    generation.setProgress(60)
+    const finalPrompt = composeFinalGenerationPrompt(prompts.replacePrompt, prompts.filterPrompt)
 
     const artwork = workspace.selectedModelProvider === 'gpt-image-2'
       ? await generateFinalArtworkWithGptImage2({
           ratio: workspace.selectedRatio,
           finalPrompt,
-        })
-      : await generateFinalArtworkWithDoubao({
-          ratio: workspace.selectedRatio,
-          finalPrompt,
           sceneImage: sceneAsset.value,
-          modelImages: assets.selectedModelViews,
-          lineArtUrl: generation.lineArtUrl || undefined,
+          modelImage: assets.selectedModelReference,
         })
+      : workspace.selectedModelProvider === 'nano banana pro'
+        ? await generateFinalArtworkWithNanoBananaPro({
+            ratio: workspace.selectedRatio,
+            finalPrompt,
+            sceneImage: sceneAsset.value,
+            modelImage: assets.selectedModelReference,
+          })
+        : await generateFinalArtworkWithDoubao({
+            ratio: workspace.selectedRatio,
+            prompt: finalPrompt,
+            sceneImage: sceneAsset.value,
+            modelImage: assets.selectedModelReference,
+          })
 
     generation.setFinalImage(artwork)
     generation.setProgress(100)
@@ -95,8 +105,7 @@ export function useGenerationFlow() {
       createdAt: generation.lastGeneratedAt,
       productTheme: workspace.productTheme,
       outputRatio: workspace.selectedRatio,
-      scenePrompt: prompts.scenePrompt,
-      finalPrompt,
+      replacePrompt: prompts.replacePrompt,
       finalImageUrl: artwork,
     }
     generation.addHistory(record)
@@ -106,8 +115,7 @@ export function useGenerationFlow() {
 
   return {
     sceneAsset,
-    generateLineArt,
-    generateScenePrompt,
+    generateReplacePrompt,
     generateFinalArtwork,
   }
 }

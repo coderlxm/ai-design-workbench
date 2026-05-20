@@ -1,34 +1,24 @@
 <script setup lang="ts">
-import type { ModelViewAsset, ModelViewTag } from '@/types/workflow'
+import { computed } from 'vue'
+
+import type { ImageAsset } from '@/types/workflow'
 
 const props = defineProps<{
-  assets: ModelViewAsset[]
+  assets: ImageAsset[]
 }>()
 
 const emit = defineEmits<{
-  add: [viewTag: ModelViewTag, file: File]
-  remove: [viewTag: ModelViewTag]
+  upload: [file: File]
   clear: []
 }>()
 
-const slots: Array<{ tag: ModelViewTag; label: string; description: string }> = [
-  { tag: 'front', label: '正面', description: '必填' },
-  { tag: 'left', label: '左侧面', description: '必填' },
-  { tag: 'right', label: '右侧面', description: '必填' },
-  { tag: 'back', label: '背面', description: '建议' },
-  { tag: 'half', label: '半身', description: '建议' },
-  { tag: 'full', label: '全身', description: '建议' },
-]
+const selectedAsset = computed(() => props.assets[0] ?? null)
 
-function assetFor(tag: ModelViewTag) {
-  return props.assets.find(asset => asset.viewTag === tag)
-}
-
-function onFileChange(tag: ModelViewTag, event: Event) {
+function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (file)
-    emit('add', tag, file)
+    emit('upload', file)
   input.value = ''
 }
 </script>
@@ -38,45 +28,34 @@ function onFileChange(tag: ModelViewTag, event: Event) {
     <header class="model-grid__header">
       <div>
         <h3 class="section-title">
-          模特六视图
+          模特参考图
         </h3>
         <p class="muted">
-          正面、左侧面、右侧面建议必填，其他视图用于增强一致性。
+          上传 1 张包含六视图的拼图作为步骤2输入。
         </p>
       </div>
-      <button class="ghost-button" type="button" @click="emit('clear')">
-        清空全部
+      <button class="ghost-button" type="button" :disabled="!selectedAsset" @click="emit('clear')">
+        清空
       </button>
     </header>
 
-    <div class="grid-template-tiles grid-6">
-      <div
-        v-for="slot in slots"
-        :key="slot.tag"
-        class="model-slot"
-      >
-        <input class="model-slot__file" type="file" accept="image/png,image/jpeg,image/webp" @change="onFileChange(slot.tag, $event)">
-        <template v-if="assetFor(slot.tag)">
-          <img :src="assetFor(slot.tag)?.sourceUrl" :alt="slot.label">
-          <div class="model-slot__overlay">
-            <strong>{{ slot.label }}</strong>
-            <span>{{ slot.description }}</span>
-          </div>
-          <div class="model-slot__actions">
-            <button type="button" @click.prevent="emit('remove', slot.tag)">
-              删除
-            </button>
-          </div>
-        </template>
-        <template v-else>
-          <div class="model-slot__empty">
-            <span class="material-symbols-outlined">add_photo_alternate</span>
-            <strong>{{ slot.label }}</strong>
-            <span>{{ slot.description }}</span>
-            <span class="model-slot__hint">点击上传</span>
-          </div>
-        </template>
-      </div>
+    <div class="model-slot">
+      <input class="model-slot__file" type="file" accept="image/png,image/jpeg,image/webp" @change="onFileChange">
+      <template v-if="selectedAsset">
+        <img :src="selectedAsset.sourceUrl" :alt="selectedAsset.title">
+        <div class="model-slot__overlay">
+          <strong>已上传参考图</strong>
+          <span>{{ selectedAsset.title }}</span>
+        </div>
+      </template>
+      <template v-else>
+        <div class="model-slot__empty">
+          <span class="material-symbols-outlined">add_photo_alternate</span>
+          <strong>上传模特参考图</strong>
+          <span>单图内包含六视图</span>
+          <span class="model-slot__hint">点击上传</span>
+        </div>
+      </template>
     </div>
   </section>
 </template>
@@ -97,7 +76,7 @@ function onFileChange(tag: ModelViewTag, event: Event) {
 
 .model-slot {
   position: relative;
-  min-height: 180px;
+  min-height: 420px;
   overflow: hidden;
   border: 1px solid var(--border-mid);
   border-radius: 14px;
@@ -117,7 +96,8 @@ function onFileChange(tag: ModelViewTag, event: Event) {
 .model-slot img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #fff;
 }
 
 .model-slot__overlay {
@@ -128,20 +108,6 @@ function onFileChange(tag: ModelViewTag, event: Event) {
   background: linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.82));
   display: grid;
   gap: 2px;
-}
-
-.model-slot__actions {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
-.model-slot__actions button {
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 9999px;
-  color: #fff;
-  background: rgba(17, 24, 39, 0.72);
 }
 
 .model-slot__empty {

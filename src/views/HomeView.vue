@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AppShell from '@/components/layout/AppShell.vue'
@@ -17,7 +17,7 @@ import { useAssetStore } from '@/stores/assets'
 import { useGenerationStore } from '@/stores/generation'
 import { usePromptStore } from '@/stores/prompts'
 import { useWorkspaceStore } from '@/stores/workspace'
-import type { ImageAsset, ModelViewAsset, ModelViewTag, WorkflowStepId } from '@/types/workflow'
+import type { ImageAsset, WorkflowStepId } from '@/types/workflow'
 
 const router = useRouter()
 const workspace = useWorkspaceStore()
@@ -25,7 +25,7 @@ const assets = useAssetStore()
 const prompts = usePromptStore()
 const generation = useGenerationStore()
 
-const { generateLineArt, generateScenePrompt, generateFinalArtwork } = useGenerationFlow()
+const { generateReplacePrompt, generateFinalArtwork } = useGenerationFlow()
 
 useWorkflowPersistence()
 
@@ -33,39 +33,30 @@ const showFinalPrompt = ref(false)
 const cropSourceUrl = ref('')
 const demoScenePrefix = '/image/scenes/demo-scene-'
 const demoModelPrefix = '/image/models/demo-'
-const preferredModelViewTags: ModelViewTag[] = ['front', 'left', 'right', 'back', 'half', 'full']
 
 function restoreLibrary() {
   const discovered = discoverLocalImageAssets()
   assets.setSceneLibrary(discovered.filter(asset => asset.kind === 'scene'))
-  assets.setModelLibrary(discovered.filter(asset => asset.kind === 'model') as ModelViewAsset[])
+  assets.setModelLibrary(discovered.filter(asset => asset.kind === 'model'))
 
   const preferredScene = assets.sceneLibrary.find(asset => asset.id.includes(`${demoScenePrefix}01`))
     ?? assets.sceneLibrary.find(asset => asset.id.includes(demoScenePrefix))
 
-  if (preferredScene && (!assets.selectedSceneAsset || !assets.selectedSceneAsset.id.includes(demoScenePrefix)))
-    assets.selectScene(preferredScene)
-
   if (!assets.selectedSceneAsset) {
-    const firstScene = assets.sceneLibrary[0]
+    const firstScene = preferredScene ?? assets.sceneLibrary[0]
     if (firstScene)
       assets.selectScene(firstScene)
   }
 
-  const demoModelViews = preferredModelViewTags
-    .map(viewTag => assets.modelLibrary.find(asset => asset.id.includes(demoModelPrefix) && asset.viewTag === viewTag))
-    .filter(Boolean) as ModelViewAsset[]
+  const preferredModel = assets.modelLibrary.find(asset => asset.id.includes(demoModelPrefix))
+    ?? assets.modelLibrary[0]
 
-  if (!assets.hasEnoughModelViews && demoModelViews.length >= 3) {
-    assets.clearModelViews()
-    demoModelViews.forEach(asset => {
-      assets.addOrReplaceModelView(asset)
-    })
-  }
+  if (!assets.hasModelReference && preferredModel)
+    assets.setModelReference(preferredModel)
 
-  if (assets.sceneAssetForPreview && assets.hasEnoughModelViews && workspace.currentStepId === 'scene-input') {
-    workspace.setStep('line-art')
-    generation.pushLog('[系统] 已自动加载演示素材，可直接开始线稿生成。')
+  if (assets.sceneAssetForPreview && assets.hasModelReference && workspace.currentStepId === 'scene-input') {
+    workspace.setStep('replace-prompt')
+    generation.pushLog('[系统] 已自动加载演示素材，可直接开始生成更换人物 Prompt。')
   }
 }
 
@@ -114,47 +105,30 @@ function handleResetCrop() {
   generation.pushLog('[系统] 已重置裁剪结果。')
 }
 
-function handleAddModelView(viewTag: ModelViewTag, file: File) {
-  const asset: ModelViewAsset = {
-    id: `model-${viewTag}-${Date.now()}`,
+function handleUploadModelReference(file: File) {
+  const asset: ImageAsset = {
+    id: `model-reference-${Date.now()}`,
     kind: 'model',
-    viewTag,
-    title: `${viewTag}-${fileNameWithoutExt(file.name)}`,
+    title: `reference-${fileNameWithoutExt(file.name)}`,
     sourceUrl: URL.createObjectURL(file),
   }
-  assets.addOrReplaceModelView(asset)
+  assets.setModelReference(asset)
   workspace.setStep('model-input')
-  generation.pushLog(`[用户] 已上传模特视图：${viewTag}`)
-}
-
-function handleRemoveModelView(viewTag: ModelViewTag) {
-  assets.removeModelView(viewTag)
-  generation.pushLog(`[系统] 已移除模特视图：${viewTag}`)
+  generation.pushLog(`[用户] 已上传模特参考图：${file.name}`)
 }
 
 function handleClearModelViews() {
   assets.clearModelViews()
-  generation.pushLog('[系统] 已清空模特视图。')
+  generation.pushLog('[系统] 已清空模特参考图。')
 }
 
-async function handleGenerateLineArt() {
+async function handleGenerateReplacePrompt() {
   try {
-    await generateLineArt()
-    workspace.setStep('line-art')
+    await generateReplacePrompt()
+    workspace.setStep('replace-prompt')
   }
   catch (error) {
-    generation.setError(error instanceof Error ? error.message : '线稿生成失败。')
-    generation.pushLog(`[错误] ${generation.errorMessage}`)
-  }
-}
-
-async function handleGenerateScenePrompt() {
-  try {
-    await generateScenePrompt()
-    workspace.setStep('scene-prompt')
-  }
-  catch (error) {
-    generation.setError(error instanceof Error ? error.message : '场景反推失败。')
+    generation.setError(error instanceof Error ? error.message : '更换人物 Prompt 生成失败。')
     generation.pushLog(`[错误] ${generation.errorMessage}`)
   }
 }
@@ -203,27 +177,18 @@ function handleExportProject() {
 
 const artifactThumbs = computed<Partial<Record<WorkflowStepId, string>>>(() => ({
   'scene-input': assets.sceneAssetForPreview?.sourceUrl,
-  'line-art': generation.lineArtUrl,
-  'scene-prompt': assets.sceneAssetForPreview?.sourceUrl,
-  'model-input': assets.selectedModelViews[0]?.sourceUrl,
+  'model-input': assets.selectedModelReference?.sourceUrl,
+  'replace-prompt': assets.sceneAssetForPreview?.sourceUrl,
   'final-output': generation.finalImageUrl,
 }))
 
 const sceneWarning = computed(() => {
   if (!assets.sceneAssetForPreview)
     return '请先选择模板图或上传场景图。'
-  return workspace.sceneCountry !== '美国' ? '场景已锁定为美国，当前输入不会改变该设定。' : ''
+  if (!assets.hasModelReference)
+    return '请先上传模特参考图（单张六视图拼图）。'
+  return ''
 })
-
-watch(
-  () => [workspace.productTheme, workspace.selectedRatio, workspace.selectedModelProvider],
-  () => {
-    if (prompts.scenePromptEdited)
-      return
-    if (prompts.scenePrompt)
-      prompts.setScenePrompt(prompts.scenePrompt, false)
-  },
-)
 
 onBeforeUnmount(() => {
   if (workspace.isCropping)
@@ -238,6 +203,7 @@ onBeforeUnmount(() => {
         v-model:product-theme="workspace.productTheme"
         v-model:selected-ratio="workspace.selectedRatio"
         v-model:selected-model-provider="workspace.selectedModelProvider"
+        v-model:enable-filter-reverse="workspace.enableFilterReverse"
         @save="handleSaveProject"
         @export="handleExportProject"
       />
@@ -256,20 +222,15 @@ onBeforeUnmount(() => {
       :current-step-id="workspace.currentStepId"
       :selected-scene="assets.selectedSceneAsset"
       :cropped-scene="assets.croppedSceneAsset"
-      :line-art-url="generation.lineArtUrl"
       :model-views="assets.selectedModelSet"
-      :scene-prompt="prompts.scenePrompt"
-      :final-prompt="prompts.finalPrompt"
       :final-image-url="generation.finalImageUrl"
       :progress="generation.progress"
       :history="generation.history"
       @upload-scene="handleUploadScene"
       @crop-scene="handleCropScene"
       @reset-crop="handleResetCrop"
-      @generate-line-art="handleGenerateLineArt"
-      @generate-scene-prompt="handleGenerateScenePrompt"
-      @add-model-view="handleAddModelView"
-      @remove-model-view="handleRemoveModelView"
+      @generate-replace-prompt="handleGenerateReplacePrompt"
+      @upload-model-reference="handleUploadModelReference"
       @clear-model-views="handleClearModelViews"
       @view-final-prompt="handleOpenFinalPrompt"
       @generate-final="handleGenerateFinal"
@@ -281,15 +242,16 @@ onBeforeUnmount(() => {
 
     <template #right>
       <InspectorPanel
-        v-model:scene-prompt="prompts.scenePrompt"
-        v-model:final-prompt="prompts.finalPrompt"
+        v-model:replace-prompt="prompts.replacePrompt"
+        v-model:enable-filter-reverse="workspace.enableFilterReverse"
         v-model:show-final-prompt="showFinalPrompt"
         :status="generation.status"
         :progress="generation.progress"
         :logs="generation.logs"
         :error-message="generation.errorMessage"
         :scene-warning="sceneWarning"
-        @generate-scene-prompt="handleGenerateScenePrompt"
+        :filter-prompt="prompts.filterPrompt"
+        @generate-replace-prompt="handleGenerateReplacePrompt"
       />
     </template>
   </AppShell>

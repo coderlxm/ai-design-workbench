@@ -120,25 +120,19 @@ export async function generateLineArtWithDoubao(sceneSourceUrl: string) {
 
 export async function generateFinalArtworkWithDoubao(options: {
   ratio: string
-  finalPrompt: string
+  prompt: string
   sceneImage?: ImageAsset | null
-  modelImages: ImageAsset[]
-  lineArtUrl?: string | null
+  modelImage?: ImageAsset | null
 }) {
-  const orderedModelViews = ['front', 'left', 'right', 'back', 'half', 'full']
-    .map(viewTag => options.modelImages.find(asset => asset.viewTag === viewTag))
-    .filter(Boolean) as ImageAsset[]
-
   const sources = [
     options.sceneImage?.sourceUrl,
-    options.lineArtUrl || undefined,
-    ...orderedModelViews.map(asset => asset.sourceUrl),
+    options.modelImage?.sourceUrl,
   ].filter(Boolean) as string[]
 
-  const imageInputs = await Promise.all(sources.slice(0, 5).map(toDoubaoImageInput))
+  const imageInputs = await Promise.all(sources.map(toDoubaoImageInput))
   const ratioHint = `输出比例要求：${options.ratio}。`
   return await generateDoubaoImage({
-    prompt: `${options.finalPrompt}\n${ratioHint}`,
+    prompt: `${options.prompt}\n${ratioHint}`,
     images: imageInputs,
     size: '2K',
   })

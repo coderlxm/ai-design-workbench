@@ -1,15 +1,14 @@
 export type WorkflowStepId =
   | 'scene-input'
-  | 'line-art'
-  | 'scene-prompt'
   | 'model-input'
+  | 'replace-prompt'
   | 'final-output'
 
 export type WorkflowStatus = 'idle' | 'active' | 'processing' | 'completed' | 'failed'
 
 export type OutputRatio = '1:1' | '4:5' | '9:16' | '16:9'
 
-export type ModelProvider = '豆包' | 'gpt-image-2' | 'gemini'
+export type ModelProvider = '豆包' | 'gpt-image-2' | 'nano banana pro'
 
 export type AssetKind = 'scene' | 'template' | 'model'
 
@@ -35,7 +34,6 @@ export interface WorkflowHistoryItem {
   createdAt: string
   productTheme: string
   outputRatio: OutputRatio
-  scenePrompt: string
-  finalPrompt: string
+  replacePrompt: string
   finalImageUrl: string
 }

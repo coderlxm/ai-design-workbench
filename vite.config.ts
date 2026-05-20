@@ -29,6 +29,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: () => '/v1/781fd50a39c9a94604c015c35441bf9b/lute-openai-img',
       },
+      '/api/nano-banana-pro': {
+        target: 'https://aigateway.edgecloudapp.com',
+        changeOrigin: true,
+        rewrite: () => '/v1/781fd50a39c9a94604c015c35441bf9b/lute-openai-img',
+      },
     },
   },
   preview: {

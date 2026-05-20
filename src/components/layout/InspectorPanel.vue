@@ -2,14 +2,15 @@
 import { computed } from 'vue'
 
 import BaseCard from '@/components/common/BaseCard.vue'
+import BaseCheckbox from '@/components/common/BaseCheckbox.vue'
 import FinalPromptDialog from '@/components/prompt/FinalPromptDialog.vue'
 import PromptPanel from '@/components/prompt/PromptPanel.vue'
 import ProgressBar from '@/components/common/ProgressBar.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { WorkflowStatus } from '@/types/workflow'
 
-const scenePrompt = defineModel<string>('scenePrompt', { default: '' })
-const finalPrompt = defineModel<string>('finalPrompt', { default: '' })
+const replacePrompt = defineModel<string>('replacePrompt', { default: '' })
+const enableFilterReverse = defineModel<boolean>('enableFilterReverse', { default: true })
 const showFinalPrompt = defineModel<boolean>('showFinalPrompt', { default: false })
 
 const props = defineProps<{
@@ -18,10 +19,11 @@ const props = defineProps<{
   logs: string[]
   errorMessage?: string
   sceneWarning?: string
+  filterPrompt?: string
 }>()
 
 defineEmits<{
-  generateScenePrompt: []
+  generateReplacePrompt: []
   closeFinalPrompt: []
   save: []
   retry: []
@@ -55,12 +57,26 @@ const statusLabel = computed(() => {
     </BaseCard>
 
     <PromptPanel
-      v-model:scene-prompt="scenePrompt"
-      v-model:final-prompt="finalPrompt"
+      v-model:replace-prompt="replacePrompt"
       :scene-warning="sceneWarning"
-      @generate-scene-prompt="$emit('generateScenePrompt')"
-      @view-final-prompt="showFinalPrompt = true"
+      @generate-replace-prompt="$emit('generateReplacePrompt')"
+      @view-replace-prompt="showFinalPrompt = true"
     />
+
+    <BaseCard title="滤镜逆向" description="控制并查看隐形滤镜逆向流程。">
+      <div class="inspector-panel__filter">
+        <BaseCheckbox v-model="enableFilterReverse" label="启用滤镜逆向（基于原场景图）" />
+        <p class="muted">
+          当前状态：{{ enableFilterReverse ? '已启用' : '已关闭（将跳过滤镜逆向）' }}
+        </p>
+        <textarea
+          class="textarea mono inspector-panel__filter-output"
+          :value="filterPrompt || ''"
+          readonly
+          placeholder="本次执行后会在这里显示逆向得到的滤镜提示词。"
+        />
+      </div>
+    </BaseCard>
 
     <BaseCard title="实时日志" description="仅保存本地工作流日志，便于验收和排查。">
       <div class="inspector-panel__logs custom-scrollbar">
@@ -72,7 +88,7 @@ const statusLabel = computed(() => {
 
     <FinalPromptDialog
       :open="showFinalPrompt"
-      :final-prompt="finalPrompt"
+      :prompt-text="replacePrompt"
       @close="showFinalPrompt = false"
     />
   </div>
@@ -105,6 +121,15 @@ const statusLabel = computed(() => {
   margin: 0;
   color: var(--text-muted);
   font-size: 13px;
+}
+
+.inspector-panel__filter {
+  display: grid;
+  gap: 10px;
+}
+
+.inspector-panel__filter-output {
+  min-height: 180px;
 }
 
 .inspector-panel__logs {

@@ -24,7 +24,7 @@ function downloadRecord(url: string, productTheme: string) {
           AI 设计工作台
         </p>
         <h1>生成记录</h1>
-        <p>记录最近的结果与组合 prompt，方便回看和下载。</p>
+        <p>记录最近的结果与更换人物 Prompt，方便回看和下载。</p>
       </div>
       <button class="secondary-button" type="button" @click="router.push('/')">
         返回工作台
@@ -41,8 +41,7 @@ function downloadRecord(url: string, productTheme: string) {
         <div class="records-grid__item">
           <img :src="item.finalImageUrl" :alt="item.productTheme">
           <div class="records-grid__meta">
-            <p><strong>场景 Prompt</strong>{{ item.scenePrompt }}</p>
-            <p><strong>最终 Prompt</strong>{{ item.finalPrompt }}</p>
+            <p><strong>更换人物 Prompt</strong>{{ item.replacePrompt }}</p>
           </div>
           <div class="records-grid__actions">
             <button class="primary-button" type="button" @click="downloadRecord(item.finalImageUrl, item.productTheme)">

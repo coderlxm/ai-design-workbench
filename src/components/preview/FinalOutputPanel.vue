@@ -22,7 +22,7 @@ defineEmits<{
 
 <template>
   <div class="workspace-stack">
-    <BaseCard title="最终产出" description="组合 prompt 并生成最终图，用户可预览、下载与重试。">
+    <BaseCard title="最终产出" description="基于场景图、模特图和更换人物 Prompt 生成最终图。">
       <div class="final-output__progress">
         <ProgressBar :value="progress" />
         <span class="muted">{{ progress }}%</span>
@@ -34,7 +34,7 @@ defineEmits<{
         </button>
         <button class="secondary-button" type="button" @click="$emit('viewPrompt')">
           <span class="material-symbols-outlined">visibility</span>
-          查看最终 Prompt
+          查看更换人物 Prompt
         </button>
         <button class="secondary-button" type="button" :disabled="!finalImageUrl" @click="$emit('download')">
           <span class="material-symbols-outlined">download</span>

@@ -39,7 +39,7 @@ function onDownloadCurrent() {
 
 <template>
   <div class="workspace-stack">
-    <BaseCard title="场景输入" description="上传场景图，并在裁剪后作为后续线稿与 prompt 基础。">
+    <BaseCard title="场景输入" description="上传场景图，并在裁剪后作为更换人物流程的基础图。">
       <div class="scene-input__actions">
         <button class="primary-button" type="button" @click="onUploadClick">
           <span class="material-symbols-outlined">upload</span>

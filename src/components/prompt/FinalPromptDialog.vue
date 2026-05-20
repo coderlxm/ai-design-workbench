@@ -3,7 +3,7 @@ import IconButton from '@/components/common/IconButton.vue'
 
 defineProps<{
   open: boolean
-  finalPrompt: string
+  promptText: string
 }>()
 
 defineEmits<{
@@ -17,7 +17,7 @@ defineEmits<{
       <header class="final-prompt-dialog__header">
         <div>
           <h3 class="section-title">
-            最终组合 Prompt
+            更换人物 Prompt
           </h3>
           <p class="muted">
             这里用于检查最终生图入参。
@@ -25,7 +25,7 @@ defineEmits<{
         </div>
         <IconButton icon="close" label="关闭" @click="$emit('close')" />
       </header>
-      <pre class="final-prompt-dialog__body">{{ finalPrompt }}</pre>
+      <pre class="final-prompt-dialog__body">{{ promptText }}</pre>
     </div>
   </div>
 </template>

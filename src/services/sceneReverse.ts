@@ -182,3 +182,55 @@ export async function reverseScenePromptWithApi(options: {
     throw new Error('场景反推接口未返回有效提示词。')
   return answer
 }
+
+function buildFilterReverseQuery(productTheme: string) {
+  return [
+    '请基于上传的原场景图，逆向生成“滤镜优化提示词”，用于后续AI生图的光影与色彩优化。',
+    `产品主题：${productTheme || '未提供'}`,
+    '请严格按以下结构输出，不要省略字段，不要输出 markdown：',
+    '一、视觉结论 这张图属于：____ 核心关键词：____ 整体色彩：____ 光线类型：____ 镜头语言：____',
+    '二、Lightroom 参数反推 色温 Temperature：____ 色调 Tint：____ 曝光 Exposure：____ 对比 Contrast：____ 高光 Highlights：____ 阴影 Shadows：____ 白位 Whites：____ 黑位 Blacks：____ 纹理 Texture：____ 清晰度 Clarity：____ 去朦胧 Dehaze：____ 自然饱和度 Vibrance：____ 饱和度 Saturation：____',
+    '三、HSL 参数 Red：H / S / L Orange：H / S / L Yellow：H / S / L Green：H / S / L Aqua：H / S / L Blue：H / S / L',
+    '四、Color Grading Shadows：____ Midtones：____ Highlights：____ Blending：____ Balance：____',
+    '五、镜头与摄影推测 焦段：____ 光圈：____ 快门：____ ISO：____ 景深：____ 透视：____',
+    '要求：尽量给出具体数值区间，结果只基于图片内容，不要杜撰无关主体。',
+  ].join('\n')
+}
+
+export async function reverseFilterPromptWithApi(options: {
+  sceneSourceUrl: string
+  productTheme: string
+}) {
+  const uploadFileId = await uploadSceneFile(options.sceneSourceUrl)
+
+  const response = await fetch(`${SCENE_REVERSE_BASE_PATH}/chat-messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SCENE_REVERSE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      inputs: {},
+      query: buildFilterReverseQuery(options.productTheme),
+      response_mode: 'blocking',
+      conversation_id: '',
+      user: SCENE_REVERSE_USER,
+      files: [
+        {
+          type: 'image',
+          transfer_method: 'local_file',
+          upload_file_id: uploadFileId,
+        },
+      ],
+    }),
+  })
+
+  const result = await parseJsonSafely<SceneReverseChatResponse>(response)
+  if (!response.ok)
+    throw new Error(result.message || `滤镜反推失败：${response.status}`)
+
+  const answer = result.answer?.trim()
+  if (!answer)
+    throw new Error('滤镜反推接口未返回有效提示词。')
+  return answer
+}

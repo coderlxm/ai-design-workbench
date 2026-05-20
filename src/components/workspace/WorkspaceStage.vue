@@ -2,20 +2,16 @@
 import { computed } from 'vue'
 
 import FinalOutputPanel from '@/components/preview/FinalOutputPanel.vue'
-import LineArtPanel from '@/components/preview/LineArtPanel.vue'
 import SceneInputPanel from '@/components/preview/SceneInputPanel.vue'
 import ModelReferenceGrid from '@/components/upload/ModelReferenceGrid.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
-import type { ImageAsset, ModelViewAsset, WorkflowHistoryItem, WorkflowStepId } from '@/types/workflow'
+import type { ImageAsset, WorkflowHistoryItem, WorkflowStepId } from '@/types/workflow'
 
 const props = defineProps<{
   currentStepId: WorkflowStepId
   selectedScene?: ImageAsset | null
   croppedScene?: ImageAsset | null
-  lineArtUrl?: string | null
-  modelViews: ModelViewAsset[]
-  scenePrompt: string
-  finalPrompt: string
+  modelViews: ImageAsset[]
   finalImageUrl?: string | null
   progress: number
   history: WorkflowHistoryItem[]
@@ -25,10 +21,8 @@ const emit = defineEmits<{
   uploadScene: [file: File]
   cropScene: []
   resetCrop: []
-  generateLineArt: []
-  generateScenePrompt: []
-  addModelView: [tag: ModelViewAsset['viewTag'], file: File]
-  removeModelView: [tag: ModelViewAsset['viewTag']]
+  generateReplacePrompt: []
+  uploadModelReference: [file: File]
   clearModelViews: []
   viewFinalPrompt: []
   generateFinal: []
@@ -38,24 +32,14 @@ const emit = defineEmits<{
   openRecords: []
 }>()
 
-function handleAddModelView(tag: ModelViewAsset['viewTag'], file: File) {
-  emit('addModelView', tag, file)
-}
-
-function handleRemoveModelView(tag: ModelViewAsset['viewTag']) {
-  emit('removeModelView', tag)
-}
-
 const stageTitle = computed(() => {
   switch (props.currentStepId) {
     case 'scene-input':
       return '场景输入'
-    case 'line-art':
-      return '线稿提取'
-    case 'scene-prompt':
-      return '场景提示词'
     case 'model-input':
       return '模特输入'
+    case 'replace-prompt':
+      return '更换人物 Prompt'
     case 'final-output':
       return '最终产出'
   }
@@ -85,32 +69,24 @@ const stageTitle = computed(() => {
       @reset-crop="$emit('resetCrop')"
     />
 
-    <LineArtPanel
-      v-else-if="currentStepId === 'line-art'"
-      :line-art-url="lineArtUrl"
-      :source-asset="croppedScene || selectedScene"
-      @generate="$emit('generateLineArt')"
-    />
-
     <BaseCard
-      v-else-if="currentStepId === 'scene-prompt'"
-      title="场景提示词阶段"
-      description="在右侧面板完成场景 prompt 编辑，这里提供推进按钮。"
+      v-else-if="currentStepId === 'replace-prompt'"
+      title="更换人物 Prompt 阶段"
+      description="在右侧面板生成和编辑步骤3提示词。"
     >
       <p class="muted">
-        当前阶段用于展示场景 reverse prompt 的编辑结果。你可以在右侧面板微调文案后继续推进。
+        Prompt 会约束场景构图保持不变，只替换人物外观，并在最终生图时作为核心入参。
       </p>
-      <button class="primary-button" type="button" @click="$emit('generateScenePrompt')">
+      <button class="primary-button" type="button" @click="$emit('generateReplacePrompt')">
         <span class="material-symbols-outlined">auto_awesome</span>
-        生成场景提示词
+        生成更换人物 Prompt
       </button>
     </BaseCard>
 
     <ModelReferenceGrid
       v-else-if="currentStepId === 'model-input'"
       :assets="modelViews"
-      @add="handleAddModelView"
-      @remove="handleRemoveModelView"
+      @upload="$emit('uploadModelReference', $event)"
       @clear="$emit('clearModelViews')"
     />
 
