@@ -1,7 +1,6 @@
 import type { ImageAsset } from '@/types/workflow'
 
 const GPT_IMAGE2_API_PATH = '/api/gpt-image-2'
-const GPT_IMAGE2_EDIT_API_PATH = '/api/gpt-image-2-edit'
 const NANO_BANANA_PRO_API_PATH = '/api/nano-banana-pro'
 const AIGATEWAY_API_KEY = 'c1b25389ed7444c08620b37f5394108a'
 
@@ -48,7 +47,75 @@ function normalizeBase64(value?: string, mime = 'image/png') {
     return ''
   if (value.startsWith('data:image/'))
     return value
-  return toDataUrl(value, mime)
+  return toDataUrl(value.replace(/\s+/g, ''), mime)
+}
+
+function looksLikeBase64(value: string) {
+  const normalized = value.replace(/\s+/g, '')
+  if (normalized.length < 128)
+    return false
+  return /^[A-Za-z0-9+/=]+$/.test(normalized)
+}
+
+function extractImageFromObject(payload: unknown) {
+  if (!payload || typeof payload !== 'object')
+    return ''
+  const item = payload as {
+    b64_json?: string
+    base64?: string
+    image_base64?: string
+    url?: string
+    image_url?: { url?: string }
+    output?: string
+  }
+  if (item.b64_json)
+    return normalizeBase64(item.b64_json)
+  if (item.base64)
+    return normalizeBase64(item.base64)
+  if (item.image_base64)
+    return normalizeBase64(item.image_base64)
+  if (item.image_url?.url)
+    return item.image_url.url
+  if (item.url)
+    return item.url
+  if (item.output)
+    return item.output.startsWith('http') ? item.output : normalizeBase64(item.output)
+  return ''
+}
+
+function extractImageFromText(content?: string) {
+  if (!content)
+    return ''
+  const trimmed = content.trim()
+  if (!trimmed)
+    return ''
+  if (trimmed.startsWith('data:image/'))
+    return trimmed
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://'))
+    return trimmed
+  if (looksLikeBase64(trimmed))
+    return normalizeBase64(trimmed)
+
+  const candidates = [
+    trimmed,
+    trimmed.replace(/^```json\s*/i, '').replace(/```$/i, '').trim(),
+    trimmed.replace(/^```\s*/i, '').replace(/```$/i, '').trim(),
+  ]
+
+  for (const candidate of candidates) {
+    if (!candidate)
+      continue
+    try {
+      const parsed = JSON.parse(candidate)
+      const fromObject = extractImageFromObject(parsed)
+      if (fromObject)
+        return fromObject
+    }
+    catch {
+      // ignore invalid JSON fragments
+    }
+  }
+  return ''
 }
 
 function shouldConvertToDataUrl(sourceUrl: string) {
@@ -117,6 +184,11 @@ function parseImageFromResponse(result: GatewayResponse) {
         return normalizeBase64(part.base64)
     }
   }
+  else if (typeof content === 'string') {
+    const fromText = extractImageFromText(content)
+    if (fromText)
+      return fromText
+  }
 
   if (result.output && !result.output.startsWith('http'))
     return normalizeBase64(result.output)
@@ -161,44 +233,23 @@ export async function generateFinalArtworkWithGptImage2(options: {
   modelImage?: ImageAsset | null
 }) {
   const sourceImages = [options.sceneImage?.sourceUrl, options.modelImage?.sourceUrl].filter(Boolean) as string[]
-
-  if (!sourceImages.length) {
-    const response = await fetch(GPT_IMAGE2_API_PATH, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${AIGATEWAY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-2',
-        prompt: `${options.finalPrompt}\n输出比例为 ${options.ratio}。`,
-        output_format: 'b64_json',
-        n: 1,
-      }),
-    })
-    return await parseGatewayResponse(response, 'gpt-image-2')
+  const imageInputs = await Promise.all(sourceImages.map(toGatewayImageInput))
+  const body: Record<string, unknown> = {
+    model: 'gpt-image-2',
+    prompt: `${options.finalPrompt}\n输出比例为 ${options.ratio}。`,
+    output_format: 'b64_json',
+    n: 1,
   }
+  if (imageInputs.length)
+    body.images = imageInputs
 
-  const formData = new FormData()
-  formData.append('model', 'gpt-image-2')
-  formData.append('prompt', `${options.finalPrompt}\n输出比例为 ${options.ratio}。`)
-  formData.append('response_format', 'b64_json')
-  formData.append('n', '1')
-  formData.append('size', '1536x2048')
-
-  for (let index = 0; index < sourceImages.length; index += 1) {
-    const sourceUrl = sourceImages[index]!
-    const blob = await sourceUrlToBlob(sourceUrl)
-    const ext = blob.type.includes('jpeg') ? 'jpg' : blob.type.includes('webp') ? 'webp' : 'png'
-    formData.append('image[]', new File([blob], `reference-${index + 1}.${ext}`, { type: blob.type || 'image/png' }))
-  }
-
-  const response = await fetch(GPT_IMAGE2_EDIT_API_PATH, {
+  const response = await fetch(GPT_IMAGE2_API_PATH, {
     method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       Authorization: `Bearer ${AIGATEWAY_API_KEY}`,
     },
-    body: formData,
+    body: JSON.stringify(body),
   })
 
   return await parseGatewayResponse(response, 'gpt-image-2')
